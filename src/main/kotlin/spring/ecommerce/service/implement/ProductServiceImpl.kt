@@ -7,26 +7,26 @@ import org.springframework.transaction.annotation.Transactional
 import spring.ecommerce.dto.Response
 import spring.ecommerce.dto.request.PaginationRequest
 import spring.ecommerce.dto.request.ProductRequest
-import spring.ecommerce.dto.request.ProductUpdateRequest
+import spring.ecommerce.dto.request.SearchProductRequest
+import spring.ecommerce.dto.request.UpdatedProductRequest
 import spring.ecommerce.dto.response.PaginationResponse
 import spring.ecommerce.dto.response.ProductResponse
-import spring.ecommerce.handleException.BadRequestException
 import spring.ecommerce.handleException.NotFoundException
 import spring.ecommerce.model.Product
-import spring.ecommerce.model.ProductImage
 import spring.ecommerce.repository.CategoryRepository
 import spring.ecommerce.repository.ProductImageRepository
 import spring.ecommerce.repository.ProductRepository
 import spring.ecommerce.repository.UserRepository
+import spring.ecommerce.service.`interface`.ProductImageService
 import spring.ecommerce.service.`interface`.ProductService
 
 
 @Service
 class ProductServiceImpl (
     private val productRepository: ProductRepository,
-    private val productImageRepository: ProductImageRepository,
     private val categoryRepository: CategoryRepository,
     private val userRepository: UserRepository,
+    private val productImageService: ProductImageService,
 ): ProductService {
 
     @Transactional
@@ -37,12 +37,12 @@ class ProductServiceImpl (
             NotFoundException("User not found")
         }
 
-        if ( user.isDeleted == true){
+        if ( user.isDeleted){
             throw NotFoundException("User not found")
         }
 
         val category = categoryRepository.findByName(categoryName).orElseThrow{
-            throw NotFoundException("Category not found")
+            NotFoundException("Category not found")
         }
 
         val product = Product(
@@ -55,41 +55,22 @@ class ProductServiceImpl (
         )
         productRepository.save(product)
 
-        if (images.count { it.isPrimary } > 1) {
-            throw BadRequestException(
-                "Only one product image can be primary."
-            )
-        }
-        val sortedImages = images.sortedByDescending { it.isPrimary }
-        val productImage = sortedImages.mapIndexed { index, image ->
-            ProductImage(
-                productId = product.id,
-                imageUrl = image.imageUrl,
-                displayOrder = index + 1,
-                isPrimary = image.isPrimary
-            )
-        }.toMutableList()
+        val productId = product.id
+            ?: throw NotFoundException("Product not found")
 
-        val saveImages =productImageRepository.saveAll(productImage)
-
-        val imageResponses = saveImages
-            .map {
-                ProductResponse.Image(
-                    id = it.id,
-                    imageUrl = it.imageUrl,
-                    displayOrder = it.displayOrder,
-                    isPrimary = it.isPrimary
-                )
-            }
-            .toMutableList()
+        val productImage = productImageService.createImages(
+            productId = productId,
+            images = images
+        )
 
         val response = ProductResponse(
             id = product.id,
             name = product.name,
+            price = product.price,
             description = product.description,
             categoryName = category.name,
             createdBy = user.username,
-            images = imageResponses
+            images = productImage
         )
 
         return Response(
@@ -113,33 +94,23 @@ class ProductServiceImpl (
             val categoryId = product.categoryId
                 ?: throw NotFoundException("Category not found")
             val category = categoryRepository.findById(categoryId).orElseThrow {
-                throw NotFoundException("Category not found")
+                NotFoundException("Category not found")
             }
 
             val userId = product.createdBy
                 ?: throw NotFoundException("User not found")
             val user = userRepository.findById(userId).orElseThrow {
-                throw NotFoundException("User not found")
+                NotFoundException("User not found")
             }
 
             val productId = product.id
             ?: throw NotFoundException("Product ID not found")
-
-            val images = productImageRepository
-                .findAllByProductIdOrderByDisplayOrderAsc(productId)
-                .map {
-                    ProductResponse.Image(
-                        id = it.id,
-                        imageUrl = it.imageUrl,
-                        displayOrder = it.displayOrder,
-                        isPrimary = it.isPrimary
-                    )
-                }
-                .toMutableList()
+            val images = productImageService.getProductImages(productId)
 
             ProductResponse(
                 id = product.id,
                 name = product.name,
+                price = product.price,
                 description = product.description,
                 categoryName = category.name,
                 createdBy = user.username,
@@ -164,7 +135,137 @@ class ProductServiceImpl (
         )
     }
 
-    override fun updateProduct(request: ProductUpdateRequest): Response<ProductResponse> {
+    @Transactional
+    override fun updateProduct(id: Long, request: UpdatedProductRequest): Response<ProductResponse> {
+        val (name, price, quantity, description, categoryName) = request
+
+        val product = productRepository.findById(id).orElseThrow {
+            NotFoundException("Product not found")
+        }
+
+        name?.let {
+            product.name = it
+        }
+
+        price?.let {
+            product.price = it
+        }
+
+        quantity?.let {
+            product.quantity = it
+        }
+
+        description?.let {
+            product.description = it
+        }
+
+        categoryName?.let {
+            val category = categoryRepository.findByName(it).orElseThrow {
+                NotFoundException("Category not found")
+            }
+
+            product.categoryId = category.id
+        }
+
+        productRepository.save(product)
+
+        val createById = product.createdBy
+            ?: throw NotFoundException("Created product not found")
+        val owner = userRepository.findById(createById).orElseThrow {
+            NotFoundException("User not found")
+        }
+
+        val categoryId = product.categoryId
+            ?: throw NotFoundException("Category not found")
+        val category = categoryRepository.findById(categoryId).orElseThrow{
+            NotFoundException("Category not found")
+        }
+
+        val productId = product.id
+            ?: throw NotFoundException("Product not found")
+        val images = productImageService.getProductImages(productId)
+
+        val response = ProductResponse(
+            id = product.id,
+            name = product.name,
+            price = product.price,
+            description = product.description,
+            createdBy = owner.username,
+            categoryName = category.name,
+            images = images,
+        )
+
+        return Response(
+            status = HttpStatus.OK,
+            data = response,
+            message = "Product updated"
+        )
+
+    }
+
+    @Transactional
+    override fun deleteProduct(id: Long): Response<Unit> {
+        val product = productRepository.findById(id).orElseThrow {
+            NotFoundException("Product not found")
+        }
+        productRepository.delete(product)
+
+        val productId = product.id
+            ?: throw NotFoundException("Product not found")
+
+        productImageService.deleteAllProductImages(productId)
+
+        return Response(
+            status = HttpStatus.OK,
+            data = null,
+            message = "Products deleted"
+        )
+
+    }
+
+    override fun getProductById(id: Long): Response<ProductResponse> {
+        val product = productRepository.findById(id).orElseThrow{
+            NotFoundException("Product not found")
+        }
+
+        val createById = product.createdBy
+            ?: throw NotFoundException("Created product not found")
+        val owner = userRepository.findById(createById).orElseThrow {
+            NotFoundException("User not found")
+        }
+
+        val categoryId = product.categoryId
+            ?: throw NotFoundException("Category not found")
+        val category = categoryRepository.findById(categoryId).orElseThrow{
+            NotFoundException("Category not found")
+        }
+
+        val productId = product.id
+            ?: throw NotFoundException("Product not found")
+        val images = productImageService.getProductImages(productId)
+
+        val response = ProductResponse(
+            id = product.id,
+            name = product.name,
+            price = product.price,
+            description = product.description,
+            createdBy = owner.username,
+            categoryName = category.name,
+            images = images,
+        )
+
+        return Response(
+            status = HttpStatus.OK,
+            data = response,
+            message = "Product updated"
+        )
+    }
+
+    override fun searchProducts(
+        request: SearchProductRequest,
+        requestPagination: PaginationRequest
+    ): Response<PaginationResponse<ProductResponse>>{
         TODO()
     }
+
 }

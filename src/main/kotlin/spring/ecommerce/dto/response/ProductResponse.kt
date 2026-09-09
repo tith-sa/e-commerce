@@ -1,20 +1,14 @@
 package spring.ecommerce.dto.response
 
-import spring.ecommerce.model.ProductImage
+import java.math.BigDecimal
 
 
 data class ProductResponse(
     val id: Long? = null,
     val name: String? = null,
+    val price: BigDecimal? = null,
     val description: String? = null,
     val createdBy: String? = null,
     val categoryName: String? = null,
-    val images: MutableList<Image>? = mutableListOf(),
-){
-    data class Image(
-        val id: Long? = null,
-        val imageUrl: String? = null,
-        val displayOrder: Int? = null,
-        val isPrimary: Boolean? = null,
-    )
-}
+    val images: List<ProductImageResponse>? = emptyList(),
+)

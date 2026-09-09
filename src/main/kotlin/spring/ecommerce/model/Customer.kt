@@ -27,6 +27,6 @@ data class Customer(
 
 
     @Column(name = "isDeleted", length = 20)
-    var isDeleted: Boolean? = null,
+    var isDeleted: Boolean = false,
 
 ) : BaseModel()

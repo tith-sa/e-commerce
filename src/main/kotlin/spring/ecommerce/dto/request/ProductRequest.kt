@@ -20,6 +20,6 @@ data class ProductRequest(
     @field:NotBlank(message = "Product's category name is required")
     val categoryName: String,
 
-    val images : MutableList<ProductImageRequest> = mutableListOf(),
+    val images : List<ProductImageRequest> = emptyList(),
 )
 

@@ -22,7 +22,7 @@ data class ProductImage(
     var displayOrder: Int? = null,
 
     @Column(name = "is_primary")
-    var isPrimary: Boolean? = null,
+    var isPrimary: Boolean = false,
 
     @Column(name = "product_id")
     var productId: Long? = null,

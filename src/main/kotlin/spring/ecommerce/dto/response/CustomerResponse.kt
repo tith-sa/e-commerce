@@ -5,5 +5,5 @@ data class CustomerResponse(
     val fullName: String? = null,
     val phoneNumber: String? = null,
     val address: String? = null,
-    val isDeleted: Boolean? = null,
+    val isDeleted: Boolean,
 )

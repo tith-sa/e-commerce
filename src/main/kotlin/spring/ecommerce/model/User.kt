@@ -31,6 +31,6 @@ data class User(
     var roleId: Long? = null,
 
     @Column(name = "is_deleted")
-    var isDeleted: Boolean? = null,
+    var isDeleted: Boolean = false,
 
 ): BaseModel()

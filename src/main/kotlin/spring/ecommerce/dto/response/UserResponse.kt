@@ -5,5 +5,5 @@ data class UserResponse(
     val username: String? = null,
     val phoneNumber: String? = null,
     val address: String? = null,
-    val isDeleted: Boolean? = null,
+    val isDeleted: Boolean,
 )
