@@ -15,17 +15,17 @@ class WebConfig(
             .addPathPatterns(
                 "/api/roles/**",
                 "/api/users/**",
-                "/api/categories/create",
-                "/api/categories/update/{id}",
+                "/api/categories/**",
                 "/api/auth/logout",
-                "/api/products/create",
+                "/api/products/**",
                 "/api/customers/**",
+                "/api/orders/**",
+                "/api/order-items/**",
+                "/api/permissions/**",
             )
             .excludePathPatterns(
                 "/api/auth/login",
-                "/api/products",
-                "/api/categories",
-                "/api/categories/search",
+                "/api/auth/refresh",
                 "/swagger-ui/**",
                 "/v3/api-docs/**"
             )

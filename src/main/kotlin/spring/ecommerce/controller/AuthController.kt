@@ -10,7 +10,9 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 import spring.ecommerce.dto.Response
 import spring.ecommerce.dto.request.LoginRequest
+import spring.ecommerce.dto.request.RefreshAccessTokenRequest
 import spring.ecommerce.dto.response.LoginResponse
+import spring.ecommerce.dto.response.RefreshAccessTokenResponse
 import spring.ecommerce.service.`interface`.AuthService
 
 
@@ -34,8 +36,17 @@ class AuthController(
     @Operation(summary = "Logout")
     fun logout(
         @RequestAttribute userId: Long
-    ): ResponseEntity<Response<String>> {
+    ): ResponseEntity<Response<Unit>> {
         val result = authService.logout(userId)
+        return ResponseEntity.ok(result)
+    }
+
+    @PostMapping("/refresh")
+    @Operation(summary = "Refresh access token")
+    fun refresh(
+       @RequestBody request: RefreshAccessTokenRequest
+    ): ResponseEntity<Response<RefreshAccessTokenResponse>> {
+        val result = authService.refreshAccessToken(request)
         return ResponseEntity.ok(result)
     }
 }

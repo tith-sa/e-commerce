@@ -6,4 +6,5 @@ import spring.ecommerce.model.Product
 
 interface OrderService {
     fun createOrder(customerId: Long ): Response<OrderResponse>
+    fun getOrderById(id: Long): Response<OrderResponse>
 }

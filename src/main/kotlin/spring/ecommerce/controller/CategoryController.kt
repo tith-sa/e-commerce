@@ -1,6 +1,7 @@
 package spring.ecommerce.controller
 
 import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import jakarta.validation.Valid
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.DeleteMapping
@@ -20,6 +21,7 @@ import spring.ecommerce.service.`interface`.CategoryService
 
 @RestController
 @RequestMapping("/api/categories")
+@SecurityRequirement(name = "bearerAuth")
 class CategoryController(
     private val categoryService: CategoryService
 ) {

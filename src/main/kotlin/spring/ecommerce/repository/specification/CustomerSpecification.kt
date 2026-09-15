@@ -9,7 +9,7 @@ fun customerSpecification(request: SearchCustomerRequest): Specification<Custome
 
     return Specification
         .where(Specifications.like<Customer>("fullName", fullName))
-        .and(Specifications.like<Customer>("phoneNumber", phoneNumber))
-        .and(Specifications.like<Customer>("address", address))
-        .and(Specifications.equal<Customer>("isDeleted", isDeleted))
+        .and(Specifications.like("phoneNumber", phoneNumber))
+        .and(Specifications.like("address", address))
+        .and(Specifications.equal("isDeleted", isDeleted))
 }

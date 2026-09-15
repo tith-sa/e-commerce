@@ -14,4 +14,5 @@ interface UserRepository : JpaRepository<User, Long> , JpaSpecificationExecutor<
     fun existsByPhoneNumber(phoneNumber: String): Boolean
     fun findByUsername(username: String): Optional<User>
     fun findAllByOrderByCreatedAtDesc(pageable: Pageable) : Page<User>
+    fun findByIdAndIsDeletedFalse(userId: Long): Optional<User>
 }

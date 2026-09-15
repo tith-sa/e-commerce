@@ -12,4 +12,6 @@ interface ProductImageService {
     fun getProductImages(productId: Long): List<ProductImageResponse>
     fun getProductImageById(id: Long): Response<ProductImageResponse>
     fun updateProductImages(id: Long, request: UpdatedProductImageRequest): Response<ProductImageResponse>
+    fun addNewProductImages(productId: Long, request: ProductImageRequest): Response<ProductImageResponse>
+    fun deleteProductImageById(id: Long): Response<Unit>
 }

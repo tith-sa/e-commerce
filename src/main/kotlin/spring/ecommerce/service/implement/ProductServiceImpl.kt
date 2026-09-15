@@ -4,6 +4,7 @@ import org.springframework.data.domain.PageRequest
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import org.springframework.web.bind.annotation.ModelAttribute
 import spring.ecommerce.dto.Response
 import spring.ecommerce.dto.request.PaginationRequest
 import spring.ecommerce.dto.request.ProductRequest
@@ -14,9 +15,9 @@ import spring.ecommerce.dto.response.ProductResponse
 import spring.ecommerce.handleException.NotFoundException
 import spring.ecommerce.model.Product
 import spring.ecommerce.repository.CategoryRepository
-import spring.ecommerce.repository.ProductImageRepository
 import spring.ecommerce.repository.ProductRepository
 import spring.ecommerce.repository.UserRepository
+import spring.ecommerce.repository.specification.productSpecification
 import spring.ecommerce.service.`interface`.ProductImageService
 import spring.ecommerce.service.`interface`.ProductService
 
@@ -33,12 +34,8 @@ class ProductServiceImpl (
     override fun createProduct(userId: Long, request: ProductRequest): Response<ProductResponse> {
         val (name, price, quantity, description, categoryName, images) = request
 
-        val user = userRepository.findById(userId).orElseThrow {
+        val user = userRepository.findByIdAndIsDeletedFalse(userId).orElseThrow {
             NotFoundException("User not found")
-        }
-
-        if ( user.isDeleted){
-            throw NotFoundException("User not found")
         }
 
         val category = categoryRepository.findByName(categoryName).orElseThrow{
@@ -69,6 +66,7 @@ class ProductServiceImpl (
             price = product.price,
             description = product.description,
             categoryName = category.name,
+            quantity = product.quantity,
             createdBy = user.username,
             images = productImage
         )
@@ -91,10 +89,8 @@ class ProductServiceImpl (
         val products = productRepository.findAllByOrderByCreatedAtDesc(pageable)
 
         val mapProduct = products.content.map { product ->
-            val categoryId = product.categoryId
-                ?: throw NotFoundException("Category not found")
-            val category = categoryRepository.findById(categoryId).orElseThrow {
-                NotFoundException("Category not found")
+            val category = product.categoryId?.let {
+                categoryRepository.findById(it).orElse(null)
             }
 
             val userId = product.createdBy
@@ -112,7 +108,8 @@ class ProductServiceImpl (
                 name = product.name,
                 price = product.price,
                 description = product.description,
-                categoryName = category.name,
+                categoryName = category?.name,
+                quantity = product.quantity,
                 createdBy = user.username,
                 images = images,
             )
@@ -190,6 +187,7 @@ class ProductServiceImpl (
             name = product.name,
             price = product.price,
             description = product.description,
+            quantity = product.quantity,
             createdBy = owner.username,
             categoryName = category.name,
             images = images,
@@ -234,10 +232,8 @@ class ProductServiceImpl (
             NotFoundException("User not found")
         }
 
-        val categoryId = product.categoryId
-            ?: throw NotFoundException("Category not found")
-        val category = categoryRepository.findById(categoryId).orElseThrow{
-            NotFoundException("Category not found")
+        val category = product.categoryId?.let { categoryId ->
+            categoryRepository.findById(categoryId).orElse(null)
         }
 
         val productId = product.id
@@ -249,8 +245,9 @@ class ProductServiceImpl (
             name = product.name,
             price = product.price,
             description = product.description,
+            quantity = product.quantity,
             createdBy = owner.username,
-            categoryName = category.name,
+            categoryName = category?.name,
             images = images,
         )
 
@@ -262,10 +259,60 @@ class ProductServiceImpl (
     }
 
     override fun searchProducts(
-        request: SearchProductRequest,
-        requestPagination: PaginationRequest
+        @ModelAttribute request: SearchProductRequest,
+        @ModelAttribute requestPagination: PaginationRequest
     ): Response<PaginationResponse<ProductResponse>>{
-        TODO()
+        val (page, size) = requestPagination
+        val pageable = PageRequest.of(
+            page - 1,
+            size
+        )
+        val specification = productSpecification(request)
+
+        val products = productRepository.findAll(specification, pageable)
+
+        val mapProduct = products.content.map {
+            val createById = it.createdBy
+                ?: throw NotFoundException("Created product not found")
+            val owner = userRepository.findById(createById).orElseThrow {
+                NotFoundException("User not found")
+            }
+
+            val category = it.categoryId?.let { categoryId ->
+                categoryRepository.findById(categoryId).orElse(null)
+            }
+
+            val productId = it.id
+                ?: throw NotFoundException("Product not found")
+            val images = productImageService.getProductImages(productId)
+            ProductResponse(
+                id = it.id,
+                name = it.name,
+                price = it.price,
+                description = it.description,
+                quantity = it.quantity,
+                createdBy = owner.username,
+                categoryName = category?.name,
+                images = images,
+
+            )
+        }
+
+        val pagination = PaginationResponse(
+            meta = PaginationResponse.ResponsePageMeta(
+                page = page,
+                pageSize = size,
+                totalElements = products.totalElements,
+                totalPages = products.totalPages,
+            ),
+            contents = mapProduct,
+        )
+
+        return Response(
+            status = HttpStatus.OK,
+            data = pagination,
+            message = "Products returned"
+        )
     }
 
 }

@@ -14,16 +14,30 @@ class JwtUtil(
     @param:Value($$"${jwt.secret}")
     private val secretKey: String,
 
-    @param:Value($$"${jwt.expiration}")
-    private val expirationTime: Int
+    @param:Value($$"${jwt.access.expiration}")
+    private val expirationAccessToken: Int,
+
+    @param:Value($$"${jwt.refresh.expiration}")
+    private val expirationRefreshToken: Int
 ) {
     val secret: SecretKey = Keys.hmacShaKeyFor(secretKey.toByteArray())
-    fun generateToken(userId: Long, roleName: String): String {
+    fun generateAccessToken(userId: Long, roleName: String): String {
         return Jwts.builder()
             .subject(userId.toString())
             .claim("roleName", roleName)
+            .claim("type", "access_token")
             .issuedAt(Date())
-            .expiration(Date(System.currentTimeMillis() + expirationTime))
+            .expiration(Date(System.currentTimeMillis() + expirationAccessToken * 1000))
+            .signWith(secret)
+            .compact()
+    }
+
+    fun generateRefreshToken(userId: Long): String {
+        return Jwts.builder()
+            .subject(userId.toString())
+            .claim("type", "refresh_token")
+            .issuedAt(Date())
+            .expiration(Date(System.currentTimeMillis() + expirationRefreshToken * 1000))
             .signWith(secret)
             .compact()
     }
@@ -37,4 +51,5 @@ class JwtUtil(
 
     fun extractUserId(token: String): Long? = extractClaims(token).subject.toLong()
     fun extractRoleId(token: String): String? = extractClaims(token)["roleName"]?.toString()
+    fun extractTokenType(token: String): String? = extractClaims(token)["type"]?.toString()
 }

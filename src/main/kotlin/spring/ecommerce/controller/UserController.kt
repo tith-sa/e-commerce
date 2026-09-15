@@ -1,9 +1,9 @@
 package spring.ecommerce.controller
 
 import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import jakarta.validation.Valid
 import org.springframework.http.ResponseEntity
-import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.ModelAttribute
 import org.springframework.web.bind.annotation.PatchMapping
@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
+import spring.ecommerce.annotaion.RequirePermission
 import spring.ecommerce.dto.Response
 import spring.ecommerce.dto.request.PaginationRequest
 import spring.ecommerce.dto.request.SearchUserRequest
@@ -25,12 +26,14 @@ import spring.ecommerce.service.`interface`.UserService
 
 @RestController
 @RequestMapping("/api/users")
+@SecurityRequirement(name = "bearerAuth")
 class UserController(
     val userService: UserService
 ) {
 
     @PostMapping("/create")
     @Operation(summary = "Create a new user", description = "Create a new user")
+    @RequirePermission("CREATE_USER")
     fun createUser(
         @Valid
         @RequestBody request: UserRequest
@@ -94,6 +97,7 @@ class UserController(
     @GetMapping("/search")
     @Operation(summary = "Search users")
     fun searchUsers(
+        @Valid
         @ModelAttribute request: SearchUserRequest,
         @ModelAttribute requestPagination: PaginationRequest
     ): ResponseEntity<Response<PaginationResponse<UserResponse>>> {

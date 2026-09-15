@@ -8,6 +8,7 @@ data class ProductResponse(
     val name: String? = null,
     val price: BigDecimal? = null,
     val description: String? = null,
+    val quantity: Int? = null,
     val createdBy: String? = null,
     val categoryName: String? = null,
     val images: List<ProductImageResponse>? = emptyList(),

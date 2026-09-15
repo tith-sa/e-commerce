@@ -52,6 +52,41 @@ class ProductImageServiceImpl(
             }
     }
 
+    override fun addNewProductImages(productId: Long, request: ProductImageRequest): Response<ProductImageResponse> {
+        val (imageUrl, isPrimary) = request
+
+        val images = productImageRepository.findAllByProductId(productId)
+
+        if (isPrimary && images.any { it.isPrimary }) {
+            throw BadRequestException(
+                "Product images can only have a primary value"
+            )
+        }
+
+        val productImage = ProductImage(
+            productId = productId,
+            imageUrl = imageUrl,
+            displayOrder = images.size + 1,
+            isPrimary = isPrimary
+        )
+
+        productImageRepository.save(productImage)
+
+        val response = ProductImageResponse(
+            id = productImage.id,
+            imageUrl = productImage.imageUrl,
+            displayOrder = productImage.displayOrder,
+            isPrimary = productImage.isPrimary
+        )
+
+        return Response(
+            status = HttpStatus.CREATED,
+            data = response,
+            message = "Product images added successfully"
+        )
+
+    }
+
     override fun deleteAllProductImages(productId: Long) {
         val productImages = productImageRepository.findAllByProductId(productId)
         productImageRepository.deleteAll(productImages)
@@ -107,15 +142,38 @@ class ProductImageServiceImpl(
                 ?: throw NotFoundException("Product image not found")
             val images = productImageRepository.findAllByProductId(productId)
 
-            productImage.isPrimary = newPrimary
-
-            if (images.count { it.isPrimary } > 1) {
-                throw BadRequestException("Product images can only have a primary value")
+            if (isPrimary && images.any { it.isPrimary }) {
+                throw BadRequestException(
+                    "Product images can only have a primary value"
+                )
             }
+
+            productImage.isPrimary = newPrimary
         }
 
-        displayOrder?.let {
-            productImage.displayOrder = it
+        displayOrder?.let { newOrder ->
+            val productId = productImage.productId
+                ?: throw NotFoundException("Product not found")
+
+            val images = productImageRepository
+                .findAllByProductId(productId)
+                .filter { it.id != productImage.id }
+                .sortedBy { it.displayOrder }
+                .toMutableList()
+
+            if (newOrder !in 1..images.size) {
+                throw BadRequestException(
+                    "Display order must be between 1 and ${images.size}"
+                )
+            }
+
+            images.add( newOrder - 1, productImage)
+
+            images.forEachIndexed { index, image ->
+                image.displayOrder = index + 1
+            }
+
+            productImageRepository.saveAll(images)
         }
 
         productImageRepository.save(productImage)
@@ -131,6 +189,19 @@ class ProductImageServiceImpl(
             status = HttpStatus.OK,
             data = response,
             message = "Updated product image"
+        )
+    }
+
+    override fun deleteProductImageById(id: Long): Response<Unit> {
+        val productImage = productImageRepository.findById(id).orElseThrow {
+            NotFoundException("Product image not found")
+        }
+        productImageRepository.delete(productImage)
+
+        return Response(
+            status = HttpStatus.OK,
+            data = null,
+            message = "Product image deleted"
         )
     }
 }

@@ -1,6 +1,7 @@
 package spring.ecommerce.controller
 
 import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import jakarta.validation.Valid
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.DeleteMapping
@@ -16,15 +17,16 @@ import org.springframework.web.bind.annotation.RestController
 import spring.ecommerce.dto.Response
 import spring.ecommerce.dto.request.PaginationRequest
 import spring.ecommerce.dto.request.ProductRequest
+import spring.ecommerce.dto.request.SearchProductRequest
 import spring.ecommerce.dto.request.UpdatedProductRequest
 import spring.ecommerce.dto.response.PaginationResponse
 import spring.ecommerce.dto.response.ProductResponse
-import spring.ecommerce.dto.response.UserResponse
 import spring.ecommerce.service.`interface`.ProductService
 
 
 @RestController
 @RequestMapping("/api/products")
+@SecurityRequirement(name = "bearerAuth")
 class ProductController(
     private val productService: ProductService
 ) {
@@ -80,6 +82,16 @@ class ProductController(
         @PathVariable id: Long
     ): ResponseEntity<Response<ProductResponse>> {
         val result = productService.getProductById(id)
+        return ResponseEntity.ok(result)
+    }
+
+
+    @GetMapping("/search")
+    fun searchProducts(
+        @ModelAttribute request : SearchProductRequest,
+        @ModelAttribute requestPagination: PaginationRequest
+    ): ResponseEntity<Response<PaginationResponse<ProductResponse>>> {
+        val result = productService.searchProducts(request, requestPagination)
         return ResponseEntity.ok(result)
     }
 

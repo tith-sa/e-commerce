@@ -34,5 +34,4 @@ data class Product(
     @Column(name = "created_by")
     var createdBy: Long? = null,
 
-
 ): BaseModel()
