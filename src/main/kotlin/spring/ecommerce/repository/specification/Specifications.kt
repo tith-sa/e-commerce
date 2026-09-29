@@ -34,34 +34,34 @@ object Specifications {
             }
         }
 
-    fun <T: Any,R : Any> likeById(
-        idField: String,
-        relatedEntity:KClass<R>,
-        relatedIdField: String,
-        relatedNameField: String,
-        value: String?
-    ): Specification<T> {
-        return Specification { root, query, cb ->
-
-            if (value.isNullOrBlank()) {
-                return@Specification null
-            }
-
-            val subquery = query.subquery(Long::class.java)
-            val related = subquery.from(relatedEntity.java)
-
-            subquery
-                .select(related.get<Long>(relatedIdField))
-                .where(
-                    cb.like(
-                        cb.lower(related.get(relatedNameField)),
-                        "%${value.lowercase()}%"
-                    )
-                )
-
-            root.get<Long>(idField).`in`(subquery)
-        }
-    }
+//    fun <T: Any,R : Any> likeById(
+//        idField: String,
+//        relatedEntity:KClass<R>,
+//        relatedIdField: String,
+//        relatedNameField: String,
+//        value: String?
+//    ): Specification<T> {
+//        return Specification { root, query, cb ->
+//
+//            if (value.isNullOrBlank()) {
+//                return@Specification null
+//            }
+//
+//            val subquery = query.subquery(Long::class.java)
+//            val related = subquery.from(relatedEntity.java)
+//
+//            subquery
+//                .select(related.get<Long>(relatedIdField))
+//                .where(
+//                    cb.like(
+//                        cb.lower(related.get(relatedNameField)),
+//                        "%${value.lowercase()}%"
+//                    )
+//                )
+//
+//            root.get<Long>(idField).`in`(subquery)
+//        }
+//    }
 
     fun <T : Any, Y : Comparable<Y>> greaterThan(
         field: String,
@@ -86,5 +86,6 @@ object Specifications {
                 cb.lessThan(root.get<Y>(field), value)
             }
         }
+
 
 }

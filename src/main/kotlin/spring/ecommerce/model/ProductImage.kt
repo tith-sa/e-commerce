@@ -21,9 +21,6 @@ data class ProductImage(
     @Column(name = "display_order")
     var displayOrder: Int? = null,
 
-    @Column(name = "is_primary")
-    var isPrimary: Boolean = false,
-
     @Column(name = "product_id")
     var productId: Long? = null,
 )

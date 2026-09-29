@@ -1,11 +1,13 @@
 package spring.ecommerce.controller
 
 import io.swagger.v3.oas.annotations.Operation
+import jakarta.servlet.http.HttpServletRequest
 import jakarta.validation.Valid
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestAttribute
 import org.springframework.web.bind.annotation.RequestBody
+import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 import spring.ecommerce.dto.Response
@@ -33,11 +35,10 @@ class AuthController(
     }
 
     @PostMapping("/logout")
-    @Operation(summary = "Logout")
     fun logout(
-        @RequestAttribute userId: Long
+        @RequestBody request: RefreshAccessTokenRequest
     ): ResponseEntity<Response<Unit>> {
-        val result = authService.logout(userId)
+        val result = authService.logout(request)
         return ResponseEntity.ok(result)
     }
 

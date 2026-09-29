@@ -18,7 +18,6 @@ import spring.ecommerce.dto.Response
 import spring.ecommerce.dto.request.PaginationRequest
 import spring.ecommerce.dto.request.SearchUserRequest
 import spring.ecommerce.dto.request.UpdatedUserRequest
-import spring.ecommerce.dto.request.UpdatedUserRoleRequest
 import spring.ecommerce.dto.request.UserRequest
 import spring.ecommerce.dto.response.PaginationResponse
 import spring.ecommerce.dto.response.UserResponse
@@ -37,71 +36,54 @@ class UserController(
     fun createUser(
         @Valid
         @RequestBody request: UserRequest
-    ): ResponseEntity<Response<UserResponse>> {
+    ): ResponseEntity<Response<Unit>> {
         val result = userService.create(request)
         return ResponseEntity.ok(result)
     }
 
     @GetMapping
     @Operation(summary = "Get all users")
-    fun getAllUsers(
+    @RequirePermission("LIST_USERS")
+    fun listUsers(
         @Valid
-        @ModelAttribute request: PaginationRequest
+        @ModelAttribute search: SearchUserRequest,
+        @ModelAttribute requestPagination: PaginationRequest
     ): ResponseEntity<Response<PaginationResponse<UserResponse>>> {
-        val result = userService.getAllUsers(request)
+        val result = userService.listUsers(search, requestPagination)
         return ResponseEntity.ok(result)
     }
 
 
     @GetMapping("/{id}")
     @Operation(summary = "Get user by id")
-    fun getUserById(
+    @RequirePermission("VIEW_USER")
+    fun viewUser(
         @PathVariable id: Long): ResponseEntity<Response<UserResponse>> {
-        val result = userService.getUserById(id)
+        val result = userService.viewUser(id)
         return ResponseEntity.ok(result)
     }
 
 
     @PutMapping("/update/{id}")
     @Operation(summary = "Update user by id")
+    @RequirePermission("UPDATE_USER")
     fun updatedUser(
         @Valid
         @PathVariable id: Long,
         @RequestBody request: UpdatedUserRequest
-    ):ResponseEntity<Response<UserResponse>>{
+    ):ResponseEntity<Response<Unit>>{
         val result = userService.updateUser(id, request)
         return ResponseEntity.ok(result)
     }
 
 
-    @PutMapping("/update/{id}/role")
-    @Operation(summary = "Update user role")
-    fun updateUserRole(
-        @Valid
-        @PathVariable id: Long,
-        @RequestBody request: UpdatedUserRoleRequest
-    ): ResponseEntity<Response<UserResponse>> {
-        val result = userService.updateUserRole(id, request)
-        return ResponseEntity.ok(result)
-    }
-
     @PatchMapping("/is-deleted/{id}")
     @Operation(summary = "Soft delete user by id")
+    @RequirePermission("DELETE_USER")
     fun updatedIsUserDeleted(
         @PathVariable id: Long
-    ): ResponseEntity<Response<UserResponse>> {
-        val result = userService.updatedIsUserDeleted(id)
-        return ResponseEntity.ok(result)
-    }
-
-    @GetMapping("/search")
-    @Operation(summary = "Search users")
-    fun searchUsers(
-        @Valid
-        @ModelAttribute request: SearchUserRequest,
-        @ModelAttribute requestPagination: PaginationRequest
-    ): ResponseEntity<Response<PaginationResponse<UserResponse>>> {
-        val result = userService.searchUser(request,requestPagination)
+    ): ResponseEntity<Response<Unit>> {
+        val result = userService.deletedUser(id)
         return ResponseEntity.ok(result)
     }
 }

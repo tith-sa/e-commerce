@@ -21,11 +21,15 @@ data class RolePermission(
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    var id : Long? = null,
+    var id: Long? = null,
 
     @Column(name = "permission_id")
     var permissionId : Long? = null,
 
     @Column(name = "role_id")
     var roleId : Long? = null,
-)
+
+    @Column(name = "sort_order")
+    var sortOrder : Int? = null,
+
+    )

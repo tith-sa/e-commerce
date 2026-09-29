@@ -31,7 +31,7 @@ data class Product(
     @Column(name = "category_id")
     var categoryId: Long? = null,
 
-    @Column(name = "created_by")
-    var createdBy: Long? = null,
+    @Column(name = "created_by_id")
+    var createdById: Long? = null,
 
 ): BaseModel()

@@ -1,14 +1,20 @@
 package spring.ecommerce.dto.request
 
 import jakarta.validation.constraints.NotBlank
+import jakarta.validation.constraints.NotNull
 
 
 data class PermissionRequest(
+    val parentId: Long? = null,
+
+    @field:NotBlank("Code is required")
+    val code: String,
+
+    @field:NotNull("Sort order permission is required")
+    val sortOrder: Int,
 
     @field:NotBlank("permission name is required")
-    val permissionName : String,
-    val description : String? = null,
+    val name : String,
 
-    @field:NotBlank("role is required")
-    val roles : List<String>
+    val roles : List<Long>
 )

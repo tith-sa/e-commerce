@@ -16,7 +16,6 @@ class WebConfig(
                 "/api/roles/**",
                 "/api/users/**",
                 "/api/categories/**",
-                "/api/auth/logout",
                 "/api/products/**",
                 "/api/customers/**",
                 "/api/orders/**",
@@ -26,6 +25,7 @@ class WebConfig(
             .excludePathPatterns(
                 "/api/auth/login",
                 "/api/auth/refresh",
+                "/api/auth/logout",
                 "/swagger-ui/**",
                 "/v3/api-docs/**"
             )

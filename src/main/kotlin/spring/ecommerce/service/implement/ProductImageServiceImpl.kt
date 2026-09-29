@@ -2,17 +2,13 @@ package spring.ecommerce.service.implement
 
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Transactional
 import spring.ecommerce.dto.Response
 import spring.ecommerce.dto.request.ProductImageRequest
-import spring.ecommerce.dto.request.UpdatedProductImageRequest
 import spring.ecommerce.dto.response.ProductImageResponse
-import spring.ecommerce.handleException.BadRequestException
 import spring.ecommerce.handleException.NotFoundException
 import spring.ecommerce.model.ProductImage
 import spring.ecommerce.repository.ProductImageRepository
 import spring.ecommerce.service.`interface`.ProductImageService
-import kotlin.collections.count
 
 
 @Service
@@ -20,54 +16,18 @@ class ProductImageServiceImpl(
     private val productImageRepository: ProductImageRepository
 ): ProductImageService {
 
-    override fun createImages(
-        productId: Long,
-        images: List<ProductImageRequest>
-    ): List<ProductImageResponse> {
-
-        if (images.count { it.isPrimary } > 1) {
-            throw BadRequestException("Product images can only have a primary value")
-        }
-
-        val productImages = images
-            .sortedByDescending { it.isPrimary }
-            .mapIndexed { index, image ->
-                ProductImage(
-                    productId = productId,
-                    imageUrl = image.imageUrl,
-                    displayOrder = index + 1,
-                    isPrimary = image.isPrimary
-                )
-            }
-
-        return productImageRepository
-            .saveAll(productImages)
-            .map {
-                ProductImageResponse(
-                    id = it.id,
-                    imageUrl = it.imageUrl,
-                    displayOrder = it.displayOrder,
-                    isPrimary = it.isPrimary
-                )
-            }
-    }
-
+    // add a new single image to existing product
     override fun addNewProductImages(productId: Long, request: ProductImageRequest): Response<ProductImageResponse> {
-        val (imageUrl, isPrimary) = request
+        val (imageUrl) = request
 
         val images = productImageRepository.findAllByProductId(productId)
 
-        if (isPrimary && images.any { it.isPrimary }) {
-            throw BadRequestException(
-                "Product images can only have a primary value"
-            )
-        }
 
+        // create an image
         val productImage = ProductImage(
             productId = productId,
             imageUrl = imageUrl,
             displayOrder = images.size + 1,
-            isPrimary = isPrimary
         )
 
         productImageRepository.save(productImage)
@@ -76,7 +36,6 @@ class ProductImageServiceImpl(
             id = productImage.id,
             imageUrl = productImage.imageUrl,
             displayOrder = productImage.displayOrder,
-            isPrimary = productImage.isPrimary
         )
 
         return Response(
@@ -92,21 +51,9 @@ class ProductImageServiceImpl(
         productImageRepository.deleteAll(productImages)
     }
 
-    override fun getProductImages(productId: Long): List<ProductImageResponse> {
-        val images = productImageRepository
-            .findAllByProductIdOrderByDisplayOrderAsc(productId)
-            .map {
-                ProductImageResponse(
-                    id = it.id,
-                    imageUrl = it.imageUrl,
-                    displayOrder = it.displayOrder,
-                    isPrimary = it.isPrimary
-                )
-            }
-        return images
-    }
 
-    override fun getProductImageById(id: Long): Response<ProductImageResponse> {
+    // get an image by id
+    override fun viewProductImage(id: Long): Response<ProductImageResponse> {
         val productImage = productImageRepository.findById(id).orElseThrow {
             NotFoundException("Product image not found")
         }
@@ -115,7 +62,6 @@ class ProductImageServiceImpl(
             id = productImage.id,
             imageUrl = productImage.imageUrl,
             displayOrder = productImage.displayOrder,
-            isPrimary = productImage.isPrimary
         )
 
         return Response(
@@ -124,72 +70,6 @@ class ProductImageServiceImpl(
             message = "Retrieved a product image"
         )
 
-    }
-
-    @Transactional
-    override fun updateProductImages(id: Long, request: UpdatedProductImageRequest): Response<ProductImageResponse> {
-        val (imageUrl, isPrimary, displayOrder) = request
-        val productImage = productImageRepository.findById(id).orElseThrow {
-            NotFoundException("Product images not found")
-        }
-
-        imageUrl?.let{
-            productImage.imageUrl = it
-        }
-
-        isPrimary?.let{ newPrimary ->
-            val productId = productImage.productId
-                ?: throw NotFoundException("Product image not found")
-            val images = productImageRepository.findAllByProductId(productId)
-
-            if (isPrimary && images.any { it.isPrimary }) {
-                throw BadRequestException(
-                    "Product images can only have a primary value"
-                )
-            }
-
-            productImage.isPrimary = newPrimary
-        }
-
-        displayOrder?.let { newOrder ->
-            val productId = productImage.productId
-                ?: throw NotFoundException("Product not found")
-
-            val images = productImageRepository
-                .findAllByProductId(productId)
-                .filter { it.id != productImage.id }
-                .sortedBy { it.displayOrder }
-                .toMutableList()
-
-            if (newOrder !in 1..images.size) {
-                throw BadRequestException(
-                    "Display order must be between 1 and ${images.size}"
-                )
-            }
-
-            images.add( newOrder - 1, productImage)
-
-            images.forEachIndexed { index, image ->
-                image.displayOrder = index + 1
-            }
-
-            productImageRepository.saveAll(images)
-        }
-
-        productImageRepository.save(productImage)
-
-        val response = ProductImageResponse(
-            id = productImage.id,
-            imageUrl = productImage.imageUrl,
-            displayOrder = productImage.displayOrder,
-            isPrimary = productImage.isPrimary
-        )
-
-        return Response(
-            status = HttpStatus.OK,
-            data = response,
-            message = "Updated product image"
-        )
     }
 
     override fun deleteProductImageById(id: Long): Response<Unit> {

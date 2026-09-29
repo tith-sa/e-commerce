@@ -13,8 +13,8 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 import spring.ecommerce.dto.Response
 import spring.ecommerce.dto.request.OrderItemRequest
+import spring.ecommerce.dto.request.UpdatedOrderItemRequest
 import spring.ecommerce.dto.response.OrderItemResponse
-import spring.ecommerce.model.OrderItem
 import spring.ecommerce.service.`interface`.OrderItemService
 
 
@@ -25,23 +25,21 @@ class OrderItemController(
     private val orderItemService: OrderItemService
 ) {
 
-    @PostMapping("/{orderId}/item/{productId}")
-    @Operation(summary = "create a new OrderItem")
-    fun createOrderItem(
+    @PostMapping("/add-item/{orderId}")
+    @Operation(summary = "add new item")
+    fun addOrderItem(
         @PathVariable orderId: Long,
-        @PathVariable productId: Long,
         @RequestBody request: OrderItemRequest
-    ): ResponseEntity<Response<OrderItemResponse>> {
-        val result = orderItemService.createOrderItem(orderId, productId, request)
+    ): ResponseEntity<Response<Unit>>{
+        val result = orderItemService.addOrderItem(orderId,request)
         return ResponseEntity.ok(result)
     }
-
 
     @PutMapping("/update/{id}")
     @Operation(summary = "update OrderItem")
     fun updateOrder(
         @PathVariable id: Long,
-        @RequestBody request: OrderItemRequest
+        @RequestBody request: UpdatedOrderItemRequest
     ): ResponseEntity<Response<OrderItemResponse>> {
         val result = orderItemService.updateOrderItem(id, request)
         return ResponseEntity.ok(result)
@@ -56,21 +54,11 @@ class OrderItemController(
         return ResponseEntity.ok(result)
     }
 
-
     @GetMapping("/{id}")
     @Operation(summary = "Get a OrderItem")
-    fun getOrderItemById(
+    fun viewOrderItem(
         @PathVariable id: Long): ResponseEntity<Response<OrderItemResponse>> {
-        val result = orderItemService.getOrderItemById(id)
-        return ResponseEntity.ok(result)
-    }
-
-    @GetMapping("/product/{productId}")
-    @Operation(summary = "Get All OrderItem By ProductId")
-    fun getAllOrderItemsByProductId(
-        @PathVariable productId: Long
-    ): ResponseEntity<Response<List<OrderItemResponse>>>{
-        val result = orderItemService.getAllOrderItemByProductId(productId)
+        val result = orderItemService.viewOrderItem(id)
         return ResponseEntity.ok(result)
     }
 }

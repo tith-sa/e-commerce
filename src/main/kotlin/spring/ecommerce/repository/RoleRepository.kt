@@ -9,4 +9,5 @@ import java.util.Optional
 interface RoleRepository : JpaRepository<Role, Long> {
     fun findByNameIgnoreCase(name: String): Optional<Role>
     fun existsByNameIgnoreCase(name: String): Boolean
-}
+    fun findByIdIn(roleId: Set<Long?>): Set<Role>
+    fun findAllByOrderByIdAsc(): List<Role>}

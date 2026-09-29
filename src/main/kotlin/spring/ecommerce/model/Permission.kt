@@ -15,9 +15,12 @@ data class Permission(
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long? = null,
 
-    @Column(name = "permission_name", unique = true, length = 50)
-    var permissionName: String? = null,
+    @Column(name = "parent_id")
+    var parentId: Long? = null,
 
-    @Column(name = "permission_description",  columnDefinition = "text")
-    var description : String? = null,
-)
+    @Column(name = "code", unique = true)
+    var code: String? = null,
+
+    @Column(name = "permission_name", length = 50)
+    var name: String? = null,
+) : BaseModel()

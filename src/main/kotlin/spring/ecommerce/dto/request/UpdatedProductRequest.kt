@@ -18,6 +18,6 @@ data class UpdatedProductRequest(
     val description: String?,
 
     @field:NotBlank(message = "Product's category name is required")
-    val categoryName: String?,
+    val categoryId: Long?,
 
 )

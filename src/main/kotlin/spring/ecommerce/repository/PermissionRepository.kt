@@ -7,6 +7,8 @@ import java.util.Optional
 
 @Repository
 interface PermissionRepository : JpaRepository<Permission, Long> {
-    fun findByPermissionName(permissionName: String) : Optional<Permission>
-    fun existsByPermissionName(permissionName: String): Boolean
+    fun existsByCode(code: String): Boolean
+    fun findByParentId(parentId: Long): Optional<Permission>
+    fun findByIdIn(ids: Set<Long?>) : Set<Permission>
+    fun findByCodeIn(code: Set<String>): Set<Permission>
 }

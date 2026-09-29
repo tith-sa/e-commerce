@@ -8,7 +8,8 @@ import spring.ecommerce.dto.response.PaginationResponse
 import spring.ecommerce.dto.response.PermissionResponse
 
 interface PermissionService {
-    fun postPermission(request: PermissionRequest): Response<PermissionResponse>
-    fun updatePermission(id: Long, request: UpdatedPermissionRequest): Response<PermissionResponse>
-    fun getAllPermissions(request: PaginationRequest): Response<PaginationResponse<PermissionResponse>>
+    fun postPermission(request: PermissionRequest): Response<Unit>
+    fun updatePermission(id: Long, request: UpdatedPermissionRequest): Response<Unit>
+    fun listPermissions(request: PaginationRequest): Response<PaginationResponse<PermissionResponse>>
+    fun deletePermission(id: Long): Response<Unit>
 }

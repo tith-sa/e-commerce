@@ -1,5 +1,6 @@
 package spring.ecommerce.service.implement
 
+import org.springframework.data.jpa.domain.Specification
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import spring.ecommerce.dto.Response
@@ -9,13 +10,14 @@ import spring.ecommerce.handleException.BadRequestException
 import spring.ecommerce.handleException.NotFoundException
 import spring.ecommerce.model.Category
 import spring.ecommerce.repository.CategoryRepository
+import spring.ecommerce.repository.specification.categorySpecification
 import spring.ecommerce.service.`interface`.CategoryService
 
 @Service
 class CategoryServiceImpl(
     private val categoryRepository: CategoryRepository
 ) : CategoryService {
-    override fun create(request: CategoryRequest): Response<CategoryResponse> {
+    override fun create(request: CategoryRequest): Response<Unit> {
         val (name, description) = request
 
         if (categoryRepository.existsByName(name)) {
@@ -28,27 +30,26 @@ class CategoryServiceImpl(
         )
         categoryRepository.save(category)
 
-        val response = CategoryResponse(
-            id = category.id,
-            name = category.name,
-            description = category.description
-        )
-
         return Response(
             status = HttpStatus.CREATED,
-            data = response,
+            data = null,
             message = "Category created"
         )
     }
 
-    override fun getAllCategories(): Response<List<CategoryResponse>>{
-        val categoryList = categoryRepository.findAll()
+    override fun listCategories(
+        name: String?,
+    ): Response<List<CategoryResponse>>{
+        val specification = categorySpecification(name)
+        val categories = categoryRepository.findAll(specification)
 
-        val response =  categoryList.map {
+        val response =  categories.map {
             CategoryResponse(
                 id = it.id,
                 name = it.name,
-                description = it.description
+                description = it.description,
+                createdAt = it.createdAt,
+                updatedAt = it.updatedAt
             )
         }
 
@@ -62,7 +63,7 @@ class CategoryServiceImpl(
     override fun updateCategory(
         id:Long,
         request: CategoryRequest
-    ): Response<CategoryResponse>{
+    ): Response<Unit>{
         val(name) = request
         val category = categoryRepository.findById(id).orElseThrow {
             throw NotFoundException("Category not found")
@@ -75,35 +76,12 @@ class CategoryServiceImpl(
         category.name = name
         categoryRepository.save(category)
 
-        val response = CategoryResponse(
-            id = category.id,
-            name = category.name,
-            description = category.description
-        )
-
         return Response(
             status = HttpStatus.OK,
-            data = response,
+            data = null,
             message = "Category updated"
         )
 
-    }
-
-    override fun searchCategoryByName(name: String): Response<List<CategoryResponse>> {
-        val categoryList = categoryRepository.findByNameContaining(name)
-        val response = categoryList.map {
-            CategoryResponse(
-                id = it.id,
-                name = it.name,
-                description = it.description
-            )
-        }
-
-        return Response(
-            status = HttpStatus.OK,
-            data = response,
-            message = "Category returned"
-        )
     }
 
     override fun deleteCategory(id: Long): Response<Unit> {
@@ -119,5 +97,24 @@ class CategoryServiceImpl(
             message = "Category deleted"
         )
 
+    }
+
+    override fun viewCategory(id: Long): Response<CategoryResponse> {
+        val category = categoryRepository.findById(id).orElseThrow {
+            NotFoundException("Category not found")
+        }
+        val response = CategoryResponse(
+            id = category.id,
+            name = category.name,
+            description = category.description,
+            createdAt = category.createdAt,
+            updatedAt = category.updatedAt
+        )
+
+        return Response(
+            status = HttpStatus.OK,
+            data = response,
+            message = "Category returned"
+        )
     }
 }

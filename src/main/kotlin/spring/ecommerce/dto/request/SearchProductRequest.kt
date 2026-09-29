@@ -4,9 +4,10 @@ import java.math.BigDecimal
 
 
 data class SearchProductRequest(
+    val search: String?,
     val name: String?,
-    val createBy: String?,
-    val categoryName: String?,
+    val createById: Long?,
+    val categoryId: Long?,
     val minPrice: BigDecimal?,
     val maxPrice: BigDecimal?,
 )

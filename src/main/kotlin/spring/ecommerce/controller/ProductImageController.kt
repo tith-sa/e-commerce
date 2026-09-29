@@ -38,21 +38,10 @@ class ProductImageController(
 
     @GetMapping("/{id}")
     @Operation(summary = "Get a product image")
-    fun getProductImageById(
+    fun viewProductImage(
         @PathVariable id: Long
     ): ResponseEntity<Response<ProductImageResponse>>{
-        val result = productImageService.getProductImageById(id)
-        return ResponseEntity.ok(result)
-    }
-
-
-    @PutMapping("/update/{id}")
-    @Operation(summary = "Update a product image")
-    fun updatedProductImage(
-        @PathVariable id: Long,
-        @RequestBody request: UpdatedProductImageRequest
-    ): ResponseEntity<Response<ProductImageResponse>>{
-        val result = productImageService.updateProductImages(id, request)
+        val result = productImageService.viewProductImage(id)
         return ResponseEntity.ok(result)
     }
 

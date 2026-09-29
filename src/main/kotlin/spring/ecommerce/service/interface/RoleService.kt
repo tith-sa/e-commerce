@@ -6,8 +6,8 @@ import spring.ecommerce.dto.request.UpdatedRoleRequest
 import spring.ecommerce.dto.response.RoleResponse
 
 interface RoleService {
-    fun createRole(request: RoleRequest): Response<RoleResponse>
-    fun getAllRole(): Response<List<RoleResponse>>
-    fun updateRole(roleId: Long ,request: UpdatedRoleRequest): Response<RoleResponse>
-    fun deleteRole(roleId: Long): Response<Unit>
+    fun createRole(request: RoleRequest): Response<Unit>
+    fun viewRole(id: Long): Response<RoleResponse>
+    fun listRoles(): Response<List<RoleResponse>>
+    fun updateRole(roleId: Long ,request: UpdatedRoleRequest): Response<Unit>
 }

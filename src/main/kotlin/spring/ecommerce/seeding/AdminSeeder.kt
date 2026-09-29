@@ -18,7 +18,7 @@ class AdminSeeder(
     private val passwordEncoder: PasswordEncoder,
 
     @param:Value($$"${admin.username}")
-    private val username: String,
+    private val adminUsername: String,
 
     @param:Value($$"${admin.password}")
     private val password: String,
@@ -33,10 +33,8 @@ class AdminSeeder(
     fun seedAdminOnStartup() {
 
         // Check whether admin already exists
-        val adminUsername = username.lowercase()
-
         if (
-            userRepository.existsByUsername(adminUsername) ||
+            userRepository.existsByUsernameIgnoreCase(adminUsername) ||
             userRepository.existsByPhoneNumber(adminPhoneNumber)
         ) {
             logger.info("Default admin already exists. Skipping admin seeding.")

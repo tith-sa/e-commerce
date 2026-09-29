@@ -17,4 +17,6 @@ data class UpdatedUserRequest(
     val password: String?,
 
     val address: String?,
+
+    val roleId: Long?
 )

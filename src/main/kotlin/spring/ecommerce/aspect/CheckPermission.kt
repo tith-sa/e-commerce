@@ -8,8 +8,9 @@ import org.springframework.stereotype.Component
 import spring.ecommerce.annotaion.RequirePermission
 import spring.ecommerce.handleException.ForbiddenException
 import spring.ecommerce.handleException.NotFoundException
+import spring.ecommerce.repository.PermissionRepository
+import spring.ecommerce.repository.RolePermissionRepository
 import spring.ecommerce.repository.UserRepository
-import spring.ecommerce.service.`interface`.RolePermissionService
 
 
 @Aspect
@@ -17,7 +18,8 @@ import spring.ecommerce.service.`interface`.RolePermissionService
 class CheckPermission(
     private val userRepository: UserRepository,
     private val request: HttpServletRequest,
-    private val rolePermissionService: RolePermissionService
+    private val rolePermissionRepository: RolePermissionRepository,
+    private val permissionRepository: PermissionRepository
 ) {
 
     @Around("@annotation(requirePermission)")
@@ -33,15 +35,25 @@ class CheckPermission(
         }
 
         val roleId = user.roleId
-            ?: throw NotFoundException("Rol e not found")
+            ?: throw NotFoundException("Role not found")
 
-        val hasPermission = rolePermissionService.hasPermission(
-            roleId,
-            requirePermission.permission
-        )
+        val setCode = requirePermission.code.toSet()
+        val permissions = permissionRepository.findByCodeIn(setCode)
+        if (permissions.size != setCode.size) {
+            throw NotFoundException("Permissions not found")
+        }
 
-        if (!hasPermission) {
-            throw ForbiddenException("Forbidden")
+        for (code in setCode) {
+            val permission = permissions.find{ it.code == code }
+                ?: throw NotFoundException("Permission not found")
+            val permissionId = permission.id
+                ?: throw NotFoundException("Permission not found")
+
+            val hasPermission = rolePermissionRepository.existsByRoleIdAndPermissionId(roleId, permissionId)
+
+            if (!hasPermission) {
+                throw ForbiddenException("Forbidden")
+            }
         }
 
         return joinPoint.proceed()

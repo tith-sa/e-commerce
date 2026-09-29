@@ -1,6 +1,7 @@
 package spring.ecommerce.service.implement
 
 import org.springframework.data.domain.PageRequest
+import org.springframework.data.domain.Sort
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -23,11 +24,11 @@ class CustomerServiceImpl(
     private val customerRepository: CustomerRepository
 ): CustomerService {
 
-    override fun createCustomer(request: CustomerRequest): Response<CustomerResponse> {
-        val (fullName, phoneNumber, address, isDeleted ) = request
+    override fun createCustomer(request: CustomerRequest): Response<Unit> {
+        val (fullName, phoneNumber, address, isDeleted) = request
 
 
-        if (customerRepository.existsByPhoneNumber(phoneNumber)){
+        if (customerRepository.existsByPhoneNumber(phoneNumber)) {
             throw BadRequestException("Phone number already exists")
         }
 
@@ -41,37 +42,36 @@ class CustomerServiceImpl(
 
         customerRepository.save(customer)
 
-        val response = CustomerResponse(
-            id = customer.id,
-            fullName = customer.fullName,
-            phoneNumber = customer.phoneNumber,
-            address = customer.address,
-            isDeleted = customer.isDeleted,
-        )
-
         return Response(
             status = HttpStatus.CREATED,
-            data = response,
+            data = null,
             message = "customer created"
         )
     }
 
-    override fun getAllCustomers(request: PaginationRequest): Response<PaginationResponse<CustomerResponse>> {
+    override fun listCustomers(
+        search: SearchCustomerRequest,
+        request: PaginationRequest
+    ): Response<PaginationResponse<CustomerResponse>> {
         val (page, size) = request
 
         val pageable = PageRequest.of(
-            page -1,
+            page - 1,
             size,
+            Sort.by(Sort.Direction.ASC, "createdAt"),
         )
-        val customers = customerRepository.findAll(pageable)
 
-        val mapCustomer = customers.content.map{
+        val specification = customerSpecification(search)
+        val customers = customerRepository.findAll(specification, pageable)
+
+        val mapCustomer = customers.content.map {
             CustomerResponse(
                 id = it.id,
                 fullName = it.fullName,
                 phoneNumber = it.phoneNumber,
                 address = it.address,
-                isDeleted = it.isDeleted,
+                createdAt = it.createdAt,
+                updatedAt = it.updatedAt,
             )
         }
 
@@ -94,9 +94,9 @@ class CustomerServiceImpl(
     }
 
     @Transactional
-    override fun updateCustomer(customerId:Long, request: UpdatedCustomerRequest): Response<CustomerResponse> {
+    override fun updateCustomer(customerId: Long, request: UpdatedCustomerRequest): Response<Unit> {
         val (fullName, phoneNumber, address) = request
-        val customer = customerRepository.findById(customerId).orElseThrow {
+        val customer = customerRepository.findByIdAndIsDeletedFalse(customerId).orElseThrow {
             NotFoundException("Customer not found")
         }
 
@@ -105,7 +105,7 @@ class CustomerServiceImpl(
         }
 
         phoneNumber?.let {
-            if (customerRepository.existsByPhoneNumber(phoneNumber)){
+            if (customerRepository.existsByPhoneNumber(phoneNumber)) {
                 throw BadRequestException("Phone number already exists")
             }
             customer.phoneNumber = it
@@ -117,23 +117,15 @@ class CustomerServiceImpl(
 
         customerRepository.save(customer)
 
-        val response = CustomerResponse(
-            id = customer.id,
-            fullName = customer.fullName,
-            phoneNumber = customer.phoneNumber,
-            address = customer.address,
-            isDeleted = customer.isDeleted,
-        )
-
         return Response(
             status = HttpStatus.OK,
-            data = response,
+            data = null,
             message = "Customer updated"
         )
     }
 
-    override fun updatedIsCustomerDeleted(id: Long): Response<CustomerResponse> {
-        val customer = customerRepository.findById(id).orElseThrow{
+    override fun deletedCustomer(id: Long): Response<Unit> {
+        val customer = customerRepository.findByIdAndIsDeletedFalse(id).orElseThrow {
             NotFoundException("Customer not found")
         }
 
@@ -141,23 +133,15 @@ class CustomerServiceImpl(
 
         customerRepository.save(customer)
 
-        val response = CustomerResponse(
-            id = customer.id,
-            fullName = customer.fullName,
-            phoneNumber = customer.phoneNumber,
-            address = customer.address,
-            isDeleted = customer.isDeleted,
-        )
-
         return Response(
             status = HttpStatus.OK,
-            data = response,
+            data = null,
             message = "customer is deleted"
         )
     }
 
-    override fun getCustomerById(id: Long): Response<CustomerResponse> {
-        val customer = customerRepository.findById(id).orElseThrow{
+    override fun viewCustomer(id: Long): Response<CustomerResponse> {
+        val customer = customerRepository.findByIdAndIsDeletedFalse(id).orElseThrow {
             throw NotFoundException("Customer not found")
         }
         val response = CustomerResponse(
@@ -165,47 +149,14 @@ class CustomerServiceImpl(
             fullName = customer.fullName,
             phoneNumber = customer.phoneNumber,
             address = customer.address,
-            isDeleted = customer.isDeleted,
+            createdAt = customer.createdAt,
+            updatedAt = customer.updatedAt,
         )
 
         return Response(
             status = HttpStatus.OK,
             data = response,
             message = "Retrieve a customer"
-        )
-    }
-
-    override fun searchCustomer(request: SearchCustomerRequest, requestPagination: PaginationRequest): Response<PaginationResponse<CustomerResponse>> {
-        val (page, size) = requestPagination
-        val pageable = PageRequest.of(
-            page -1,
-            size,
-        )
-        val specification = customerSpecification(request)
-        val customers = customerRepository.findAll(specification, pageable)
-
-        val mapCustomer = customers.content.map{
-            CustomerResponse(
-                id = it.id,
-                fullName = it.fullName,
-                phoneNumber = it.phoneNumber,
-                address = it.address,
-                isDeleted = it.isDeleted,
-            )
-        }
-        val pagination = PaginationResponse(
-            PaginationResponse.ResponsePageMeta(
-                page = page,
-                pageSize = size,
-                totalElements = customers.totalElements,
-                totalPages = customers.totalPages,
-            ),
-            contents = mapCustomer
-        )
-        return Response(
-            status = HttpStatus.OK,
-            data = pagination,
-            message = "customers retrieved"
         )
     }
 }

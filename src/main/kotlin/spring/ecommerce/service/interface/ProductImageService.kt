@@ -6,12 +6,8 @@ import spring.ecommerce.dto.request.UpdatedProductImageRequest
 import spring.ecommerce.dto.response.ProductImageResponse
 
 interface ProductImageService {
-
-    fun createImages(productId: Long, images: List<ProductImageRequest>): List<ProductImageResponse>
     fun deleteAllProductImages(productId: Long)
-    fun getProductImages(productId: Long): List<ProductImageResponse>
-    fun getProductImageById(id: Long): Response<ProductImageResponse>
-    fun updateProductImages(id: Long, request: UpdatedProductImageRequest): Response<ProductImageResponse>
+    fun viewProductImage(id: Long): Response<ProductImageResponse>
     fun addNewProductImages(productId: Long, request: ProductImageRequest): Response<ProductImageResponse>
     fun deleteProductImageById(id: Long): Response<Unit>
 }

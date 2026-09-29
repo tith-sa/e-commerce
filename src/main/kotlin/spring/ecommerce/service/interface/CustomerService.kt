@@ -9,10 +9,9 @@ import spring.ecommerce.dto.response.CustomerResponse
 import spring.ecommerce.dto.response.PaginationResponse
 
 interface CustomerService {
-    fun createCustomer(request: CustomerRequest): Response<CustomerResponse>
-    fun getAllCustomers(request: PaginationRequest): Response<PaginationResponse<CustomerResponse>>
-    fun updateCustomer(customerId: Long, request: UpdatedCustomerRequest): Response<CustomerResponse>
-    fun updatedIsCustomerDeleted(id: Long): Response<CustomerResponse>
-    fun getCustomerById(id: Long): Response<CustomerResponse>
-    fun searchCustomer(request: SearchCustomerRequest, requestPagination: PaginationRequest):Response<PaginationResponse<CustomerResponse>>
+    fun createCustomer(request: CustomerRequest): Response<Unit>
+    fun listCustomers(search: SearchCustomerRequest,request: PaginationRequest): Response<PaginationResponse<CustomerResponse>>
+    fun updateCustomer(customerId: Long, request: UpdatedCustomerRequest): Response<Unit>
+    fun deletedCustomer(id: Long): Response<Unit>
+    fun viewCustomer(id: Long): Response<CustomerResponse>
 }

@@ -5,11 +5,34 @@ import spring.ecommerce.dto.request.SearchCustomerRequest
 import spring.ecommerce.model.Customer
 
 fun customerSpecification(request: SearchCustomerRequest): Specification<Customer> {
-    val (fullName, phoneNumber, address, isDeleted) = request
+    val (search, fullName, phoneNumber, address) = request
 
-    return Specification
-        .where(Specifications.like<Customer>("fullName", fullName))
-        .and(Specifications.like("phoneNumber", phoneNumber))
-        .and(Specifications.like("address", address))
-        .and(Specifications.equal("isDeleted", isDeleted))
+    var specification = Specifications.equal<Customer>("isDeleted", false)
+
+    if (!search.isNullOrBlank()) {
+        specification = specification
+            .and(Specifications.like<Customer>("fullName", search))
+            .or(Specifications.like<Customer>("phoneNumber", search))
+            .or(Specifications.like<Customer>("address", search))
+    }
+
+    if (!fullName.isNullOrBlank()) {
+        specification = specification.and(
+            Specifications.like<Customer>("fullName", fullName)
+        )
+    }
+
+    if(!phoneNumber.isNullOrBlank()) {
+        specification = specification.and(
+            Specifications.like<Customer>("phoneNumber", phoneNumber)
+        )
+    }
+
+    if (!address.isNullOrBlank()) {
+        specification = specification.and(
+            Specifications.like<Customer>("address", address)
+        )
+    }
+
+    return specification
 }

@@ -2,6 +2,7 @@ package spring.ecommerce.dto.request
 
 import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.NotBlank
+import jakarta.validation.constraints.NotNull
 import jakarta.validation.constraints.Positive
 import java.math.BigDecimal
 
@@ -17,8 +18,8 @@ data class ProductRequest(
 
     val description: String? = null,
 
-    @field:NotBlank(message = "Product's category name is required")
-    val categoryName: String,
+    @field:NotNull(message = "Product's category is required")
+    val categoryId: Long,
 
     val images : List<ProductImageRequest> = emptyList(),
 )

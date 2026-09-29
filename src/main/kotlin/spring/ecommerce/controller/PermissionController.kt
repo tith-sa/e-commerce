@@ -3,6 +3,7 @@ package spring.ecommerce.controller
 import io.swagger.v3.oas.annotations.Operation
 import jakarta.validation.Valid
 import org.springframework.http.ResponseEntity
+import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.ModelAttribute
 import org.springframework.web.bind.annotation.PathVariable
@@ -28,10 +29,11 @@ class PermissionController(
 
     @PostMapping("/create")
     @Operation(summary = "Creates a new permission")
+    @RequirePermission("CREATE_PERMISSION")
     fun postPermission(
         @Valid
         @RequestBody request: PermissionRequest
-    ): ResponseEntity<Response<PermissionResponse>>{
+    ): ResponseEntity<Response<Unit>>{
         val result = permissionService.postPermission(request)
         return ResponseEntity.ok(result)
     }
@@ -39,10 +41,11 @@ class PermissionController(
 
     @PutMapping("/update/{id}")
     @Operation(summary = "Updates a permission")
+    @RequirePermission("UPDATE_PERMISSION")
     fun updatePermission(
         @PathVariable id: Long,
         @RequestBody request: UpdatedPermissionRequest
-    ): ResponseEntity<Response<PermissionResponse>> {
+    ): ResponseEntity<Response<Unit>> {
         val result = permissionService.updatePermission(id, request)
         return ResponseEntity.ok(result)
     }
@@ -50,12 +53,22 @@ class PermissionController(
 
     @GetMapping
     @Operation(summary = "Get all permissions")
-    fun getAllPermissions(
+    @RequirePermission("LIST_PERMISSION")
+    fun listPermissions(
         @ModelAttribute request: PaginationRequest
     ): ResponseEntity<Response<PaginationResponse<PermissionResponse>>>{
-        val result = permissionService.getAllPermissions(request)
+        val result = permissionService.listPermissions(request)
         return ResponseEntity.ok(result)
     }
 
 
+//    @DeleteMapping("/{id}")
+//    @Operation(summary = "Deletes a permission")
+//    @RequirePermission("DELETE_PERMISSION")
+//    fun deletePermission(
+//        @PathVariable id: Long
+//    ): ResponseEntity<Response<Unit>>{
+//        val result = permissionService.deletePermission(id)
+//        return ResponseEntity.ok(result)
+//    }
 }

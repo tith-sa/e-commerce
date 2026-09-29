@@ -5,6 +5,7 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import spring.ecommerce.dto.Response
 import spring.ecommerce.dto.request.OrderItemRequest
+import spring.ecommerce.dto.request.UpdatedOrderItemRequest
 import spring.ecommerce.dto.response.OrderItemResponse
 import spring.ecommerce.handleException.BadRequestException
 import spring.ecommerce.handleException.NotFoundException
@@ -14,10 +15,10 @@ import spring.ecommerce.repository.OrderItemRepository
 import spring.ecommerce.repository.OrderRepository
 import spring.ecommerce.repository.ProductImageRepository
 import spring.ecommerce.repository.ProductRepository
-import spring.ecommerce.repository.UserRepository
 import spring.ecommerce.service.`interface`.OrderItemService
 import java.math.BigDecimal
 import kotlin.collections.map
+import kotlin.plus
 
 
 @Service
@@ -25,162 +26,146 @@ class OrderItemServiceImpl(
     private val orderItemRepository: OrderItemRepository,
     private val orderRepository: OrderRepository,
     private val productRepository: ProductRepository,
-    private val usrRepository: UserRepository,
     private val productImageRepository: ProductImageRepository,
 ): OrderItemService {
 
     @Transactional
-    override fun createOrderItem(orderId: Long, productId: Long, request: OrderItemRequest): Response<OrderItemResponse> {
-        val (quantity) = request
+    override fun addOrderItem(
+        orderId: Long,
+        request: OrderItemRequest ,
+    ): Response<Unit>{
+        val (productId, quantity) = request
+
+        // validate order is exist
         val order = orderRepository.findById(orderId).orElseThrow {
             NotFoundException("Order not found")
         }
 
-        if (order.orderStatus != OrderStatus.PENDING){
-            throw BadRequestException("Add order not allowed")
+        // validate only order status is pending can add new item
+        if ( order.orderStatus != OrderStatus.PENDING.value ) {
+            throw BadRequestException("Can not add new order item")
         }
 
-        val product = productRepository.findById(productId).orElseThrow {
+        // validate product is exist?
+        val item = productRepository.findById(productId).orElseThrow{
             NotFoundException("Product not found")
         }
 
-        val productName = product.name
-            ?: throw NotFoundException("Product not found")
+        // find product image by product id and isPrimary true
+        val itemId = item.id
+            ?: throw NotFoundException("Item not found")
+        val productImage = productImageRepository.findAllByProductId(itemId)
+        val image = productImage
+            .firstOrNull { it.displayOrder == 1 }
 
-        val userId = product.createdBy ?: throw BadRequestException("User not found")
-        val productOwner = usrRepository.findById(userId).orElseThrow{
-            NotFoundException("User not found")
+        val itemPrice = item.price ?: BigDecimal.ZERO
+
+        // validate product quantity(check stock)
+        item.quantity?.let {
+            if (it < quantity) {
+                throw BadRequestException("Item doesn't have enough stock")
+            }
         }
 
-        val productImage = productImageRepository.findAllByProductIdAndIsPrimary( productId, true)
+        // update product quantity that's minus item quantity
+        item.quantity = item.quantity?.minus(quantity)
+        productRepository.save(item)
 
-        val productQuantity = product.quantity
-            ?: 0
-        if ( quantity >  productQuantity ) {
-            throw BadRequestException("Doesn't have enough stock")
-        }
+        // calculate amount
+        val itemAmount = itemPrice * BigDecimal(quantity)
 
+        // update and calculate subtotal (sum new item amount with the old subtotal)
+        val subtotal = order.subtotal?.plus(itemAmount)
 
-        val productPrice = product.price
-            ?: throw BadRequestException("Product price isn't set")
-        val amount = productPrice.multiply(BigDecimal(quantity))
-
-        val orderItem = OrderItem(
-            orderId = orderId,
-            productId = productId,
-            quantity = quantity,
-            amount = amount,
-            unitPrice = productPrice,
-            productImage = productImage.imageUrl,
-            productName = productName,
-            productOwner = productOwner.username
-        )
-
-        orderItemRepository.save(orderItem)
-
-        val totalProductQuantity = productQuantity - quantity
-
-        product.quantity = totalProductQuantity
-
-        productRepository.save(product)
-
-        val orderItems = orderItemRepository.findAllByOrderId(orderId)
-
-        val totalAmount = orderItems.fold(BigDecimal.ZERO) { total, item ->
-            total + (item.amount ?: BigDecimal.ZERO)
-        }
-
-        order.totalAmount = totalAmount
-
+        // update new subtotal and grand total and save it to order table in db
+        order.subtotal = subtotal
+        order.grandTotal = subtotal
         orderRepository.save(order)
 
-        val response = OrderItemResponse(
-            id = orderItem.id,
-            productName = orderItem.productName,
-            productOwner = orderItem.productOwner,
-            productImage = orderItem.productImage,
-            quantity = orderItem.quantity,
-            unitPrice = orderItem.unitPrice,
-            amount = orderItem.amount,
-        )
+        // create order item
+        val orderItem = OrderItem(
+                orderId = orderId,
+                productId = item.id,
+                productName = item.name,
+                productImage = image?.imageUrl,
+                quantity = quantity,
+                unitPrice = itemPrice,
+                amount = itemAmount,
+            )
 
+        // save an orderItem to db
+        orderItemRepository.save(orderItem)
+
+        // return response
         return Response(
             status = HttpStatus.CREATED,
-            data = response,
-            message = "order Item created"
+            data = null,
+            message = "new order item created"
         )
-    }
 
-    override fun getAllOrderItemsByOrder(orderId: Long): List<OrderItemResponse> {
-        val orderItems = orderItemRepository
-            .findAllByOrderId(orderId)
-            .map {
-                OrderItemResponse(
-                    id = it.id,
-                    productName = it.productName,
-                    productOwner = it.productOwner,
-                    productImage = it.productImage,
-                    quantity = it.quantity,
-                    unitPrice = it.unitPrice,
-                    amount = it.amount
-                )
-            }
-        return orderItems
+
     }
 
     @Transactional
-    override fun updateOrderItem(id: Long, request: OrderItemRequest): Response<OrderItemResponse> {
+    override fun updateOrderItem(id: Long, request: UpdatedOrderItemRequest): Response<OrderItemResponse> {
         val (quantity) = request
+
+        // validate order item is exist
         val orderItem = orderItemRepository.findById(id).orElseThrow {
             NotFoundException("Order item not found")
         }
 
+        // validate order is exist
         val orderId = orderItem.orderId ?: throw NotFoundException("Order not found")
         val order = orderRepository.findById(orderId).orElseThrow {
             NotFoundException("Order not found")
         }
 
-        if (order.orderStatus != OrderStatus.PENDING){
+        // can update while order pending
+        if (order.orderStatus != OrderStatus.PENDING.value){
             throw BadRequestException("Update order not allowed")
         }
 
-        val productId = orderItem.productId ?: throw NotFoundException("Product not found")
-        val product = productRepository.findById(productId).orElseThrow {
-            NotFoundException("Product not found")
+        // validate item is exist
+        val itemId = orderItem.productId ?: throw NotFoundException("Item not found")
+        val item = productRepository.findById(itemId).orElseThrow {
+            NotFoundException("Item not found")
         }
 
-        val productQuantity = product.quantity
-            ?: 0
-        if (productQuantity < quantity) {
+        // check stock item quantity and update product stock
+        var itemQuantity = item.quantity ?: 0
+        orderItem.quantity?.let {itemQuantity += it }
+
+        if (itemQuantity < quantity) {
             throw BadRequestException("Doesn't have enough stock")
         }
 
-        orderItem.quantity = quantity
-        orderItem.amount = orderItem.unitPrice?.times(BigDecimal(quantity))
+        val totalItemQuantity = itemQuantity - quantity
+        item.quantity = totalItemQuantity
+        productRepository.save(item)
 
-        orderItemRepository.save(orderItem)
+        val itemPrice = item.price ?: BigDecimal.ZERO
+        val itemAmount = itemPrice * BigDecimal(quantity)
 
-        val totalProductQuantity = productQuantity - quantity
+        // update and calculate subtotal
+        var subtotal = order.subtotal ?: BigDecimal.ZERO
+        orderItem.amount?.let { subtotal -= it }
+        subtotal += itemAmount
 
-        product.quantity = totalProductQuantity
-
-        productRepository.save(product)
-
-        val orderItems = orderItemRepository.findAllByOrderId(orderId)
-
-        val totalAmount = orderItems.fold(BigDecimal.ZERO) { total, item ->
-            total + (item.amount ?: BigDecimal.ZERO)
-        }
-
-        order.totalAmount = totalAmount
-
+        // update subtotal and grand total and save it to order table in db
+        order.subtotal = subtotal
+        order.grandTotal = subtotal
         orderRepository.save(order)
 
+        // save update order item quantity and also update amount
+        orderItem.quantity = quantity
+        orderItem.amount = itemAmount
+        orderItemRepository.save(orderItem)
 
         val response = OrderItemResponse(
             id = orderItem.id,
+            productId = orderItem.productId,
             productName = orderItem.productName,
-            productOwner = orderItem.productOwner,
             productImage = orderItem.productImage,
             quantity = quantity,
             unitPrice = orderItem.unitPrice,
@@ -197,42 +182,45 @@ class OrderItemServiceImpl(
     @Transactional
     override fun deleteOrderItemById(id: Long): Response<Unit> {
 
+        // validate order item is exist
         val orderItem = orderItemRepository.findById(id)
             .orElseThrow {
                 NotFoundException("Order item not found")
             }
 
+        // validate order is exist
         val orderId = orderItem.orderId
             ?: throw NotFoundException("Order not found")
-
         val order = orderRepository.findById(orderId)
             .orElseThrow {
                 NotFoundException("Order not found")
             }
 
-        if (order.orderStatus != OrderStatus.PENDING) {
+        // check condition only order status is pending that allowed to delete
+        if (order.orderStatus != OrderStatus.PENDING.value) {
             throw BadRequestException("Delete order not allowed")
         }
 
-        // Find product
-        val productId = orderItem.productId
+        // validate item is exist
+        val itemId = orderItem.productId
             ?: throw NotFoundException("Product not found")
 
-        val product = productRepository.findById(productId)
+        val item = productRepository.findById(itemId)
             .orElseThrow {
                 NotFoundException("Product not found")
             }
 
         // Return quantity to product stock
-        val orderItemQuantity = orderItem.quantity
-            ?: 0
-        product.quantity = product.quantity?.plus(orderItemQuantity)
-        productRepository.save(product)
+        val itemQuantity = orderItem.quantity ?: 0
+        item.quantity = item.quantity?.plus(itemQuantity)
+        productRepository.save(item)
 
-        // Subtract order item amount from order total
-        order.totalAmount = (order.totalAmount ?: BigDecimal.ZERO) -
-                    (orderItem.amount ?: BigDecimal.ZERO)
+        // Subtract order item amount from old
+        val subtotal = orderItem.amount?.let { order.subtotal?.minus(it) }
 
+        // update subtotal and grand total and save it to order table in db
+        order.subtotal = subtotal
+        order.grandTotal = subtotal
         orderRepository.save(order)
 
         // Delete order item
@@ -245,15 +233,15 @@ class OrderItemServiceImpl(
         )
     }
 
-    override fun getOrderItemById(id: Long): Response<OrderItemResponse> {
+    override fun viewOrderItem(id: Long): Response<OrderItemResponse> {
         val orderItem = orderItemRepository.findById(id).orElseThrow {
             NotFoundException("Order item not found")
         }
 
         val response = OrderItemResponse(
             id = orderItem.id,
+            productId = orderItem.productId,
             productName = orderItem.productName,
-            productOwner = orderItem.productOwner,
             productImage = orderItem.productImage,
             quantity = orderItem.quantity,
             unitPrice = orderItem.unitPrice,
@@ -266,27 +254,6 @@ class OrderItemServiceImpl(
             message = "Retrieved a order item"
         )
     }
-
-    override fun getAllOrderItemByProductId(productId: Long): Response<List<OrderItemResponse>> {
-        val orderItems = orderItemRepository
-            .findAllByProductId(productId)
-            .map {
-            OrderItemResponse(
-                id = it.id,
-                productName = it.productName,
-                productOwner = it.productOwner,
-                productImage = it.productImage,
-                quantity = it.quantity,
-                unitPrice = it.unitPrice,
-                amount = it.amount
-            )
-        }
-
-        return Response(
-            status = HttpStatus.OK,
-            data = orderItems,
-            message = "Order item retrieved"
-        )
-    }
 }
+
 

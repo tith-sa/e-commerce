@@ -5,9 +5,9 @@ import spring.ecommerce.dto.request.CategoryRequest
 import spring.ecommerce.dto.response.CategoryResponse
 
 interface CategoryService {
-    fun create(request: CategoryRequest): Response<CategoryResponse>
-    fun getAllCategories(): Response<List<CategoryResponse>>
-    fun updateCategory(id:Long,request: CategoryRequest): Response<CategoryResponse>
-    fun searchCategoryByName(name: String): Response<List<CategoryResponse>>
+    fun create(request: CategoryRequest): Response<Unit>
+    fun listCategories(name: String?): Response<List<CategoryResponse>>
+    fun updateCategory(id:Long,request: CategoryRequest): Response<Unit>
     fun deleteCategory(id:Long): Response<Unit>
+    fun viewCategory(id:Long): Response<CategoryResponse>
 }

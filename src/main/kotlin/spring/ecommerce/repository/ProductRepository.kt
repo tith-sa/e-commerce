@@ -10,5 +10,6 @@ import spring.ecommerce.model.Product
 @Repository
 interface ProductRepository: JpaRepository<Product, Long>, JpaSpecificationExecutor<Product> {
     fun findAllByOrderByCreatedAtDesc(pageable: PageRequest) : Page<Product>
+    fun findByIdIn(id: Set<Long>): Set<Product>
 
 }

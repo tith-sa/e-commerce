@@ -22,6 +22,9 @@ data class Order(
     @Column(name = "customer_id")
     var customerId: Long? = null,
 
+    @Column(name = "order_remark", length = 255)
+    var remark: String? = null,
+
     @Column(name = "customer_full_name", length = 50)
     var customerFullName: String? = null,
 
@@ -31,16 +34,17 @@ data class Order(
     @Column(name = "customer_address", length = 255)
     var customerAddress: String? = null,
 
-    @Column(name = "total_Amount", precision = 10, scale = 2)
-    var totalAmount: BigDecimal? = null,
+    @Column(name = "sub_total", precision = 10, scale = 2)
+    var subtotal: BigDecimal? = null,
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "order_status", length = 10)
-    var orderStatus: OrderStatus? = null,
+    @Column(name = "grand_total", precision = 10, scale = 2)
+    var grandTotal: BigDecimal? = null,
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "payment_status", length = 10)
-    var paymentStatus: PaymentStatus? = null,
+    @Column(name = "order_status")
+    var orderStatus: Int? = null,
+
+    @Column(name = "payment_status")
+    var paymentStatus: Int? = null,
 
 
 ): BaseModel()

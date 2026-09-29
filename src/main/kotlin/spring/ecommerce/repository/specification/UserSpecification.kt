@@ -4,15 +4,48 @@ import org.springframework.data.jpa.domain.Specification
 import spring.ecommerce.dto.request.SearchUserRequest
 import spring.ecommerce.model.User
 
-
 fun userSpecification(
-    request: SearchUserRequest
+    search: SearchUserRequest
 ): Specification<User> {
-    val (username, phoneNumber, address, isDeleted) = request
+    val(search, username, phoneNumber, address) = search
 
-    return Specification
-        .where(Specifications.like<User>("username", username))
-        .and(Specifications.like<User>("phoneNumber", phoneNumber))
-        .and(Specifications.like<User>("address", address))
-        .and(Specifications.equal<User>("isDeleted", isDeleted))
+    var specification = Specifications.equal<User>("isDeleted", false)
+
+    if (!search.isNullOrBlank()) {
+        specification = specification.and(
+            Specifications.like<User>("username", search)
+                .or(Specifications.like<User>("phoneNumber", search))
+                .or(Specifications.like<User>("address", search))
+        )
+    }
+
+    // Specific username
+    if (!username.isNullOrBlank()) {
+        specification = specification.and(
+            Specifications.like<User>("username", username)
+        )
+    }
+
+    // Specific phone number
+    if (!phoneNumber.isNullOrBlank()) {
+        specification = specification.and(
+            Specifications.like<User>("phoneNumber", phoneNumber)
+        )
+    }
+
+    // Specific address
+    if (!address.isNullOrBlank()) {
+        specification = specification.and(
+            Specifications.like<User>("address", address)
+        )
+    }
+
+//    if (search.isNullOrBlank()) {
+//        specification = specification
+//            .and(Specifications.like<User>("username", username))
+//            .and (Specifications.like<User>("phoneNumber", phoneNumber))
+//            .and(Specifications.like<User>("address", address))
+//    }
+
+    return specification
 }

@@ -3,6 +3,7 @@ package spring.ecommerce.service.implement
 import org.springframework.http.HttpStatus
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
+import spring.ecommerce.config.AppConstraints
 import spring.ecommerce.dto.Response
 import spring.ecommerce.dto.request.LoginRequest
 import spring.ecommerce.dto.request.RefreshAccessTokenRequest
@@ -10,21 +11,21 @@ import spring.ecommerce.dto.response.LoginResponse
 import spring.ecommerce.dto.response.RefreshAccessTokenResponse
 import spring.ecommerce.handleException.BadRequestException
 import spring.ecommerce.handleException.NotFoundException
-import spring.ecommerce.model.RefreshToken
-import spring.ecommerce.repository.RefreshTokenRepository
-import spring.ecommerce.repository.RoleRepository
+import spring.ecommerce.model.ProvideToken
+import spring.ecommerce.model.enum.TokenType
+import spring.ecommerce.repository.ProvideTokenRepository
 import spring.ecommerce.repository.UserRepository
 import spring.ecommerce.security.JwtUtil
 import spring.ecommerce.service.`interface`.AuthService
 import java.time.LocalDateTime
+import java.time.ZoneId
 
 @Service
 class AuthServiceImpl(
     private val userRepository: UserRepository,
     private val passwordEncoder: PasswordEncoder,
     private val jwtUtil: JwtUtil,
-    private val roleRepository: RoleRepository,
-    private val refreshTokenRepository: RefreshTokenRepository
+    private val provideTokenRepository: ProvideTokenRepository,
 ) : AuthService {
 
     override fun login(request: LoginRequest): Response<LoginResponse> {
@@ -38,27 +39,31 @@ class AuthServiceImpl(
             throw BadRequestException("Incorrect password")
         }
 
-        val roleId = user.roleId
-            ?: throw NotFoundException("Role not found")
-
-        val roleName = roleRepository.findById(roleId).orElseThrow{
-            throw NotFoundException("Role not found")
-        }
-
         val userId = user.id
             ?: throw BadRequestException("User not found")
 
-        val accessToken = jwtUtil.generateAccessToken(userId, roleName.name!!)
+        val accessToken = jwtUtil.generateAccessToken(userId)
         val refreshToken = jwtUtil.generateRefreshToken(userId)
 
-        // Save refresh token in database
-        refreshTokenRepository.save(
-            RefreshToken(
-                token = refreshToken,
-                userId = userId,
-                expiresAt = LocalDateTime.now().plusDays(7)
-            )
+        val accessExpiresAt = jwtUtil.extractAccessExpiration(accessToken)
+            .toInstant()
+            .atZone(ZoneId.of(AppConstraints.LOCAL_TZ))
+            .toLocalDateTime()
+
+        val refreshExpiresAt = jwtUtil.extractRefreshExpiration(refreshToken)
+            .toInstant()
+            .atZone(ZoneId.of(AppConstraints.LOCAL_TZ))
+            .toLocalDateTime()
+
+        val token = ProvideToken(
+            accessToken = accessToken,
+            refreshToken = refreshToken,
+            userId = userId,
+            accessExpiresAt = accessExpiresAt,
+            refreshExpiresAt = refreshExpiresAt
         )
+
+        provideTokenRepository.save(token)
 
         val response = LoginResponse(
             accessToken = accessToken,
@@ -81,13 +86,13 @@ class AuthServiceImpl(
 
         val tokenType = jwtUtil.extractTokenType(refreshToken)
 
-        if (tokenType != "refresh_token") {
+        if (tokenType != TokenType.REFRESH_TOKEN.value) {
             throw BadRequestException("Invalid refresh token")
         }
 
         // 2. Find refresh token in database
-        val storedToken = refreshTokenRepository
-            .findByToken(refreshToken)
+        val storedToken = provideTokenRepository
+            .findByRefreshToken(refreshToken)
             .orElseThrow {
                 BadRequestException("Invalid refresh token")
             }
@@ -98,33 +103,30 @@ class AuthServiceImpl(
         }
 
         // 4. Check database expiration
-        if (storedToken.expiresAt.isBefore(LocalDateTime.now())) {
+        if (storedToken.refreshExpiresAt?.isBefore(LocalDateTime.now()) == true){
             throw BadRequestException("Refresh token has expired")
         }
 
-        val userId = jwtUtil.extractUserId(refreshToken)
-            ?: throw BadRequestException("Invalid refresh token")
+        val userId = storedToken.userId
+        ?: throw BadRequestException("User not found")
 
-        val user = userRepository.findById(userId)
-            .orElseThrow {
-                NotFoundException("User not found")
-            }
-
-        val roleId = user.roleId
-            ?: throw NotFoundException("Role not found")
-
-        val role = roleRepository.findById(roleId)
-            .orElseThrow {
-                NotFoundException("Role not found")
-            }
-
-        val accessToken = jwtUtil.generateAccessToken(
-            user.id!!,
-            role.name!!
+        val newAccessToken = jwtUtil.generateAccessToken(
+            userId,
         )
 
+        val accessExpiresAt = jwtUtil.extractAccessExpiration(newAccessToken)
+            .toInstant()
+            .atZone(ZoneId.of(AppConstraints.LOCAL_TZ))
+            .toLocalDateTime()
+
+
+        storedToken.accessToken = newAccessToken
+        storedToken.accessExpiresAt = accessExpiresAt
+
+        provideTokenRepository.save(storedToken)
+
         val response = RefreshAccessTokenResponse(
-            accessToken = accessToken,
+            accessToken = newAccessToken,
         )
 
         return Response(
@@ -134,11 +136,20 @@ class AuthServiceImpl(
         )
     }
 
-    override fun logout(userId : Long): Response<Unit> {
+    override fun logout(request: RefreshAccessTokenRequest): Response<Unit> {
+        val (refreshToken) = request
+        val token = provideTokenRepository.findByRefreshToken(refreshToken).orElseThrow {
+            NotFoundException("Refresh token not found")
+        }
+
+        token.revoked = true
+        provideTokenRepository.save(token)
+
         return Response(
             status = HttpStatus.OK,
             data = null,
             message = "User logged out"
         )
     }
+
 }

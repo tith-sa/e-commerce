@@ -20,4 +20,4 @@ data class Role(
 
     @Column(name = "description", columnDefinition = "text")
     var description: String? = null,
-)
+) : BaseModel()

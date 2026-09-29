@@ -8,5 +8,5 @@ import spring.ecommerce.model.ProductImage
 interface ProductImageRepository: JpaRepository<ProductImage, Long> {
     fun findAllByProductIdOrderByDisplayOrderAsc(id: Long) : List<ProductImage>
     fun findAllByProductId(productId: Long) : List<ProductImage>
-    fun findAllByProductIdAndIsPrimary(id: Long, isPrimary: Boolean): ProductImage
+    fun findAllByProductIdIn(productId: Set<Long?>): Set<ProductImage>
 }

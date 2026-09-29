@@ -26,9 +26,6 @@ data class OrderItem(
     @Column(name = "product_name")
     var productName: String? = null,
 
-    @Column(name = "product_owner")
-    var productOwner: String? = null,
-
     @Column(name = "product_Image", columnDefinition = "text")
     var productImage: String? = null,
 
